@@ -1,7 +1,26 @@
 import type { NextConfig } from "next";
+import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Enable experimental features for AI SDK
+  experimental: {
+    // Enable server actions
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+
+  // Allow external images (for any model logos, etc.)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+
 };
 
-export default nextConfig;
+// Wrap with Workflow DevKit
+export default withWorkflow(nextConfig);
