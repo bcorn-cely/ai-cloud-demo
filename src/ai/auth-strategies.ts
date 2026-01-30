@@ -286,7 +286,7 @@ export function getAuthStatusSummary(): {
     ].filter(Boolean) as string[],
     sandboxAuth: process.env.VERCEL_OIDC_TOKEN
       ? 'oidc'
-      : process.env.VERCEL_TOKEN
+      : process.env.VERCEL_OIDC_TOKEN
         ? 'token'
         : 'none',
   };

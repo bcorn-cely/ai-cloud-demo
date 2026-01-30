@@ -88,13 +88,13 @@ export async function POST() {
 
   try {
     // Check if sandbox credentials are available
-    const hasCredentials = process.env.VERCEL_TOKEN || process.env.VERCEL_OIDC_TOKEN;
+    const hasCredentials = process.env.VERCEL_OIDC_TOKEN;
 
     if (!hasCredentials) {
       return NextResponse.json({
         success: false,
         error: 'Sandbox credentials not configured',
-        message: 'Add VERCEL_TOKEN to your .env.local file, or deploy to Vercel for automatic OIDC authentication.',
+        message: 'Add VERCEL_OIDC_TOKEN to your .env.local file, or deploy to Vercel for automatic OIDC authentication.',
         logs: ['Error: No Vercel credentials found'],
       }, { status: 401 });
     }

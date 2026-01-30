@@ -240,7 +240,7 @@ vercel env pull
 
 Sandbox requires Vercel project context. Either:
 - Run `vercel link` and `vercel env pull`
-- Or set `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`, `VERCEL_TOKEN`
+- Or set `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`, `VERCEL_OIDC_TOKEN`
 
 ### Custom Provider Issues
 

@@ -152,7 +152,7 @@ export default function SandboxPage() {
                   <Info className="h-4 w-4 text-indigo-500" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Requires <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">VERCEL_TOKEN</code> locally, or deploy to Vercel for automatic OIDC auth.
+                  Requires <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">VERCEL_OIDC_TOKEN</code> locally, or deploy to Vercel for automatic OIDC auth.
                 </p>
               </div>
             </CardContent>
