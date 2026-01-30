@@ -7,8 +7,6 @@ import {
   Shield,
   Play,
   RefreshCw,
-  Copy,
-  Check,
   Plus,
   Trash2,
   AlertCircle,
@@ -21,9 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CodeBlock } from '@/components/ui/code-block';
 
 interface ProxyHop {
   url: string;
@@ -48,7 +46,6 @@ export default function ProxyPage() {
   const [simulateChainedProxy, setSimulateChainedProxy] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [copied, setCopied] = useState(false);
 
   function addHeader() {
     setExtraHeaders([...extraHeaders, { key: '', value: '' }]);
@@ -68,13 +65,11 @@ export default function ProxyPage() {
     setTesting(true);
     setTestResult(null);
 
-    // Simulate proxy test
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const hops: ProxyHop[] = [];
     let totalLatency = 0;
 
-    // First hop (local/corporate proxy)
     if (baseURL) {
       const hop1Latency = Math.floor(Math.random() * 50) + 10;
       totalLatency += hop1Latency;
@@ -93,7 +88,6 @@ export default function ProxyPage() {
       });
     }
 
-    // Simulated chained proxy
     if (simulateChainedProxy) {
       const hop2Latency = Math.floor(Math.random() * 30) + 5;
       totalLatency += hop2Latency;
@@ -105,7 +99,6 @@ export default function ProxyPage() {
       });
     }
 
-    // Final destination
     const finalLatency = Math.floor(Math.random() * 100) + 50;
     totalLatency += finalLatency;
     hops.push({
@@ -124,12 +117,6 @@ export default function ProxyPage() {
     });
 
     setTesting(false);
-  }
-
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   const configCode = `import { createGateway } from '@ai-sdk/gateway';
@@ -156,128 +143,148 @@ const gateway = createGateway({
 });`;
 
   return (
-    <div className="container mx-auto px-6 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Proxy & VPC Lab</h1>
-        <p className="text-muted-foreground mt-1">
-          Configure corporate proxy, custom baseURL, and chained proxy patterns
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="container mx-auto px-6 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/25">
+              <Network className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Proxy & VPC Lab</h1>
+              <p className="text-sm text-muted-foreground">
+                Configure corporate proxy, custom baseURL, and chained proxy patterns
+              </p>
+            </div>
+          </div>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Configuration Panel */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Network className="h-5 w-5" />
-                Proxy Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure how requests are routed to AI Gateway
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>AI Gateway Base URL Override</Label>
-                <Input
-                  placeholder="https://ai-gateway.vercel.sh/v1/ai (default)"
-                  value={baseURL}
-                  onChange={(e) => setBaseURL(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Override the default AI Gateway URL for corporate proxy or self-hosted gateway
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Extra Headers</Label>
-                  <Button variant="ghost" size="sm" onClick={addHeader}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Header
-                  </Button>
-                </div>
-                {extraHeaders.map((header, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Header name"
-                      value={header.key}
-                      onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Header value"
-                      value={header.value}
-                      onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeHeader(index)}
-                      disabled={extraHeaders.length === 1}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Simulate Chained Proxy</Label>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Configuration Panel */}
+          <div className="space-y-6">
+            <Card className="border-0 shadow-lg shadow-black/5">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Network className="h-4 w-4 text-rose-500" />
+                  Proxy Configuration
+                </CardTitle>
+                <CardDescription>
+                  Configure how requests are routed to AI Gateway
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">AI Gateway Base URL Override</Label>
+                  <Input
+                    placeholder="https://ai-gateway.vercel.sh/v1/ai (default)"
+                    value={baseURL}
+                    onChange={(e) => setBaseURL(e.target.value)}
+                    className="h-10 bg-muted/50 border-0"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Add an intermediate proxy hop to simulate corporate networks
+                    Override the default AI Gateway URL for corporate proxy or self-hosted gateway
                   </p>
                 </div>
-                <Switch
-                  checked={simulateChainedProxy}
-                  onCheckedChange={setSimulateChainedProxy}
-                />
-              </div>
 
-              <Button onClick={runTest} disabled={testing} className="w-full">
-                {testing ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4 mr-2" />
-                )}
-                Run Test Request
-              </Button>
-            </CardContent>
-          </Card>
+                <Separator />
 
-          {/* VPC Patterns */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Customer VPC / On-Prem Patterns
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="pattern1">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="pattern1">On-Prem Models</TabsTrigger>
-                  <TabsTrigger value="pattern2">Gateway + Proxy</TabsTrigger>
-                </TabsList>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-muted-foreground">Extra Headers</Label>
+                    <Button variant="ghost" size="sm" onClick={addHeader}>
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      Add Header
+                    </Button>
+                  </div>
+                  {extraHeaders.map((header, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Header name"
+                        value={header.key}
+                        onChange={(e) => updateHeader(index, 'key', e.target.value)}
+                        className="flex-1 h-9 bg-muted/50 border-0"
+                      />
+                      <Input
+                        placeholder="Header value"
+                        value={header.value}
+                        onChange={(e) => updateHeader(index, 'value', e.target.value)}
+                        className="flex-1 h-9 bg-muted/50 border-0"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => removeHeader(index)}
+                        disabled={extraHeaders.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
 
-                <TabsContent value="pattern1" className="mt-4">
-                  <Alert>
-                    <Server className="h-4 w-4" />
-                    <AlertTitle>Pattern 1: On-Prem Models Only</AlertTitle>
-                    <AlertDescription>
-                      All models run inside your VPC. Use OpenAI-compatible provider with internal
-                      baseURL.
-                    </AlertDescription>
-                  </Alert>
-                  <pre className="mt-3 p-3 rounded-lg bg-muted text-xs">
-{`import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+                <Separator />
+
+                <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
+                  <div>
+                    <Label className="font-medium">Simulate Chained Proxy</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Add an intermediate proxy hop to simulate corporate networks
+                    </p>
+                  </div>
+                  <Switch
+                    checked={simulateChainedProxy}
+                    onCheckedChange={setSimulateChainedProxy}
+                  />
+                </div>
+
+                <Button
+                  onClick={runTest}
+                  disabled={testing}
+                  className="w-full h-11 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/25"
+                >
+                  {testing ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  Run Test Request
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* VPC Patterns */}
+            <Card className="border-0 shadow-lg shadow-black/5">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-rose-500" />
+                  Customer VPC / On-Prem Patterns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="pattern1">
+                  <TabsList className="grid w-full grid-cols-2 h-10">
+                    <TabsTrigger value="pattern1" className="text-xs">On-Prem Models</TabsTrigger>
+                    <TabsTrigger value="pattern2" className="text-xs">Gateway + Proxy</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="pattern1" className="mt-5 space-y-4">
+                    <div className="p-4 rounded-xl bg-violet-500/10">
+                      <div className="flex items-start gap-3">
+                        <Server className="h-5 w-5 text-violet-600 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-sm">Pattern 1: On-Prem Models Only</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            All models run inside your VPC. Use OpenAI-compatible provider with internal baseURL.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <CodeBlock
+                      language="typescript"
+                      filename="on-prem-provider.ts"
+                      code={`import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 const onPremProvider = createOpenAICompatible({
   name: 'on-prem-llm',
@@ -289,19 +296,26 @@ const { text } = await generateText({
   model: onPremProvider('llama-3-70b'),
   prompt: 'Analyze this internal document...',
 });`}
-                  </pre>
-                </TabsContent>
+                      maxHeight="240px"
+                    />
+                  </TabsContent>
 
-                <TabsContent value="pattern2" className="mt-4">
-                  <Alert>
-                    <Network className="h-4 w-4" />
-                    <AlertTitle>Pattern 2: Gateway via Corporate Proxy</AlertTitle>
-                    <AlertDescription>
-                      Use AI Gateway for hosted models, routed through your corporate proxy.
-                    </AlertDescription>
-                  </Alert>
-                  <pre className="mt-3 p-3 rounded-lg bg-muted text-xs">
-{`import { createGateway } from '@ai-sdk/gateway';
+                  <TabsContent value="pattern2" className="mt-5 space-y-4">
+                    <div className="p-4 rounded-xl bg-rose-500/10">
+                      <div className="flex items-start gap-3">
+                        <Network className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-sm">Pattern 2: Gateway via Corporate Proxy</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Use AI Gateway for hosted models, routed through your corporate proxy.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <CodeBlock
+                      language="typescript"
+                      filename="gateway-proxy.ts"
+                      code={`import { createGateway } from '@ai-sdk/gateway';
 
 const gateway = createGateway({
   baseURL: 'https://proxy.corp.example.com/ai-gateway',
@@ -315,106 +329,104 @@ const { text } = await generateText({
   model: gateway('anthropic/claude-sonnet-4'),
   prompt: 'Summarize this...',
 });`}
-                  </pre>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+                      maxHeight="260px"
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Results Panel */}
-        <div className="space-y-6">
-          {/* Test Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Test Results</CardTitle>
-              <CardDescription>Results from proxy chain test</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {testResult ? (
-                <div className="space-y-4">
-                  <Alert className={testResult.success ? 'border-green-500' : 'border-red-500'}>
-                    {testResult.success ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                    )}
-                    <AlertTitle>{testResult.success ? 'Success' : 'Failed'}</AlertTitle>
-                    <AlertDescription>
-                      {testResult.message}
-                      {testResult.totalLatencyMs && (
-                        <span className="ml-2">
-                          Total latency: {testResult.totalLatencyMs}ms
-                        </span>
+          {/* Results Panel */}
+          <div className="space-y-6">
+            {/* Test Results */}
+            <Card className="border-0 shadow-lg shadow-black/5">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base">Test Results</CardTitle>
+                <CardDescription>Results from proxy chain test</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {testResult ? (
+                  <div className="space-y-5">
+                    <Alert className={`border-0 ${testResult.success ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                      {testResult.success ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-500" />
                       )}
-                    </AlertDescription>
-                  </Alert>
+                      <AlertTitle>{testResult.success ? 'Success' : 'Failed'}</AlertTitle>
+                      <AlertDescription>
+                        {testResult.message}
+                        {testResult.totalLatencyMs && (
+                          <Badge variant="secondary" className="ml-2 text-[10px]">
+                            {testResult.totalLatencyMs}ms total
+                          </Badge>
+                        )}
+                      </AlertDescription>
+                    </Alert>
 
-                  {testResult.hops && (
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium">Proxy Hops</h4>
-                      {testResult.hops.map((hop, index) => (
-                        <div key={index} className="p-3 rounded-lg border bg-muted/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">Hop {index + 1}</Badge>
-                              <code className="text-xs truncate max-w-[200px]">{hop.url}</code>
+                    {testResult.hops && (
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Proxy Hops
+                        </h4>
+                        {testResult.hops.map((hop, index) => (
+                          <div key={index} className="p-4 rounded-xl bg-muted/30">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs font-medium">Hop {index + 1}</Badge>
+                                <code className="text-xs truncate max-w-[200px]">{hop.url}</code>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {hop.status}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {hop.latencyMs}ms
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {hop.status}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {hop.latencyMs}ms
-                              </span>
-                            </div>
+                            <p className="text-xs text-muted-foreground break-words">
+                              Headers: {Object.entries(hop.headers).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                            </p>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Headers:{' '}
-                            {Object.entries(hop.headers)
-                              .map(([k, v]) => `${k}: ${v}`)
-                              .join(', ')}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="p-4 rounded-xl bg-emerald-500/10">
+                      <p className="text-xs text-muted-foreground mb-1">Effective Base URL</p>
+                      <code className="text-sm font-mono text-emerald-600 break-all">{testResult.effectiveBaseURL}</code>
                     </div>
-                  )}
-
-                  <div className="p-3 rounded-lg border">
-                    <p className="text-sm font-medium">Effective Base URL</p>
-                    <code className="text-xs">{testResult.effectiveBaseURL}</code>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Run a test to see proxy chain results</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-4">
+                      <Network className="h-8 w-8 text-rose-500/70" />
+                    </div>
+                    <p className="font-medium mb-1">No test results</p>
+                    <p className="text-sm">Run a test to see proxy chain results</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Generated Code */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Generated Configuration</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(configCode)}
-                >
-                  {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-                  Copy
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[300px]">
-                <pre className="p-3 rounded-lg bg-muted text-xs">{configCode}</pre>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+            {/* Generated Code */}
+            <Card className="border-0 shadow-lg shadow-black/5">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base">Generated Configuration</CardTitle>
+                <CardDescription>Based on your settings above</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CodeBlock
+                  language="typescript"
+                  filename="gateway-config.ts"
+                  code={configCode}
+                  maxHeight="300px"
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

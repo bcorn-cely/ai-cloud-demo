@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ExternalLink,
   Info,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,146 +115,164 @@ export default function SandboxPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const needsAuth = !process.env.NEXT_PUBLIC_VERCEL;
+  function getStatusColor() {
+    if (sandbox.status === 'running') return 'bg-emerald-500';
+    if (sandbox.status === 'creating' || sandbox.status === 'stopping') return 'bg-amber-500';
+    if (sandbox.status === 'error') return 'bg-red-500';
+    return 'bg-gray-400';
+  }
 
   return (
-    <div className="container mx-auto px-6 py-6 max-w-2xl">
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Box className="h-5 w-5" />
-          <h1 className="text-xl font-bold tracking-tight">Sandbox</h1>
-          <Badge variant="secondary" className="text-[10px]">Beta</Badge>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="container mx-auto px-6 py-8 max-w-2xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 shadow-lg shadow-indigo-500/25">
+              <Box className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight">Sandbox</h1>
+                <Badge variant="secondary" className="text-[10px] font-medium">Beta</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Ephemeral VMs with mock OpenAI-compatible servers
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Ephemeral VMs with mock OpenAI-compatible servers
-        </p>
-      </div>
 
-      {/* Auth hint */}
-      {sandbox.status === 'idle' && (
-        <Alert className="mb-4">
-          <Info className="h-3.5 w-3.5" />
-          <AlertDescription className="text-xs">
-            Requires <code className="bg-muted px-1 rounded">VERCEL_TOKEN</code> locally, or deploy to Vercel for automatic OIDC auth.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Control Panel */}
-      <Card>
-        <CardContent className="pt-5 space-y-4">
-          {/* Status */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  sandbox.status === 'running'
-                    ? 'bg-green-500'
-                    : sandbox.status === 'creating' || sandbox.status === 'stopping'
-                    ? 'bg-yellow-500 animate-pulse'
-                    : sandbox.status === 'error'
-                    ? 'bg-red-500'
-                    : 'bg-gray-400'
-                }`}
-              />
-              <span className="text-sm font-medium capitalize">{sandbox.status}</span>
-              {sandbox.sandboxId && (
-                <code className="text-[10px] text-muted-foreground">{sandbox.sandboxId}</code>
-              )}
-            </div>
-            <Badge variant="outline" className="text-[10px]">node24</Badge>
-          </div>
-
-          {/* Domain */}
-          {sandbox.domain && (
-            <div className="p-3 rounded-lg border bg-muted/30">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium">Domain</span>
+        {/* Auth hint */}
+        {sandbox.status === 'idle' && (
+          <Card className="mb-6 border-0 bg-gradient-to-r from-indigo-500/5 via-indigo-500/10 to-indigo-500/5 shadow-lg shadow-indigo-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 shrink-0">
+                  <Info className="h-4 w-4 text-indigo-500" />
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(sandbox.domain!)}>
-                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                    <a href={`${sandbox.domain}/health`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Requires <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">VERCEL_TOKEN</code> locally, or deploy to Vercel for automatic OIDC auth.
+                </p>
               </div>
-              <code className="text-xs break-all">{sandbox.domain}</code>
-            </div>
-          )}
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              onClick={startSandbox}
-              disabled={sandbox.status === 'creating' || sandbox.status === 'running'}
-              className="flex-1 h-9"
-              size="sm"
-            >
-              {sandbox.status === 'creating' ? (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <Play className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              Start
-            </Button>
-            <Button
-              variant="outline"
-              onClick={stopSandbox}
-              disabled={sandbox.status !== 'running'}
-              size="sm"
-              className="h-9"
-            >
-              <Square className="h-3.5 w-3.5 mr-1.5" />
-              Stop
-            </Button>
-          </div>
-
-          {/* Logs */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium">Logs</span>
+        {/* Control Panel */}
+        <Card className="border-0 shadow-lg shadow-black/5">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-indigo-500" />
+              Sandbox Control
+            </CardTitle>
+            <CardDescription>Manage your ephemeral test environment</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Status */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30">
+              <div className="flex items-center gap-3">
+                <div className={`h-3 w-3 rounded-full ${getStatusColor()} ${
+                  sandbox.status === 'creating' || sandbox.status === 'stopping' ? 'animate-pulse' : ''
+                }`} />
+                <span className="font-medium capitalize">{sandbox.status}</span>
+                {sandbox.sandboxId && (
+                  <code className="text-xs text-muted-foreground font-mono">{sandbox.sandboxId}</code>
+                )}
+              </div>
+              <Badge variant="outline" className="text-xs font-medium">node24</Badge>
             </div>
-            <ScrollArea className="h-[140px] rounded-md border bg-black p-2">
-              {sandbox.logs.length > 0 ? (
-                <div className="font-mono text-[10px] text-green-400 space-y-0.5">
-                  {sandbox.logs.map((log, i) => (
-                    <p key={i}>$ {log}</p>
-                  ))}
+
+            {/* Domain */}
+            {sandbox.domain && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-medium">Domain</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(sandbox.domain!)}>
+                      {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a href={`${sandbox.domain}/health`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <p className="font-mono text-[10px] text-gray-500">Ready</p>
-              )}
-            </ScrollArea>
-          </div>
+                <code className="text-sm font-mono break-all text-emerald-700">{sandbox.domain}</code>
+              </div>
+            )}
 
-          {sandbox.error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-3.5 w-3.5" />
-              <AlertDescription className="text-xs">{sandbox.error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Usage - Collapsible */}
-          <Collapsible open={showUsage} onOpenChange={setShowUsage}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-xs">
-                How to use
-                <span className="text-muted-foreground">{showUsage ? '−' : '+'}</span>
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                onClick={startSandbox}
+                disabled={sandbox.status === 'creating' || sandbox.status === 'running'}
+                className="flex-1 h-11 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 shadow-lg shadow-indigo-500/25"
+              >
+                {sandbox.status === 'creating' ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
+                Start Sandbox
               </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3 space-y-3">
-              <div className="text-xs text-muted-foreground">
-                <p className="mb-2">Use in Playground: select &quot;Sandbox&quot; provider and paste the domain.</p>
-                <p>Or use directly with AI SDK:</p>
+              <Button
+                variant="outline"
+                onClick={stopSandbox}
+                disabled={sandbox.status !== 'running'}
+                className="h-11"
+              >
+                <Square className="h-4 w-4 mr-2" />
+                Stop
+              </Button>
+            </div>
+
+            {/* Logs */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Terminal className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logs</span>
               </div>
-              <pre className="p-2 rounded-md bg-muted text-[10px] overflow-x-auto">
+              <ScrollArea className="h-[160px] rounded-xl border-0 bg-zinc-950 p-4">
+                {sandbox.logs.length > 0 ? (
+                  <div className="font-mono text-xs text-emerald-400 space-y-1">
+                    {sandbox.logs.map((log, i) => (
+                      <p key={i} className="leading-relaxed">
+                        <span className="text-zinc-500">$</span> {log}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-mono text-xs text-zinc-500">Ready to start...</p>
+                )}
+              </ScrollArea>
+            </div>
+
+            {sandbox.error && (
+              <Alert variant="destructive" className="border-0 bg-red-500/10">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{sandbox.error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Usage - Collapsible */}
+            <Collapsible open={showUsage} onOpenChange={setShowUsage}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between h-10 text-sm font-medium">
+                  <span>How to use</span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showUsage ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-3">Use in Playground: select &quot;Sandbox&quot; provider and paste the domain.</p>
+                  <p>Or use directly with AI SDK:</p>
+                </div>
+                <pre className="p-4 rounded-xl bg-muted/50 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words">
 {`import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 const sandbox = createOpenAICompatible({
@@ -265,16 +284,17 @@ const { text } = await generateText({
   model: sandbox('mock-gpt-4'),
   prompt: 'Hello!',
 });`}
-              </pre>
-              <div className="flex gap-1 flex-wrap">
-                <Badge variant="outline" className="text-[10px]">mock-gpt-4</Badge>
-                <Badge variant="outline" className="text-[10px]">mock-claude</Badge>
-                <Badge variant="outline" className="text-[10px]">mock-llama</Badge>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
+                </pre>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge variant="secondary" className="text-xs font-medium">mock-gpt-4</Badge>
+                  <Badge variant="secondary" className="text-xs font-medium">mock-claude</Badge>
+                  <Badge variant="secondary" className="text-xs font-medium">mock-llama</Badge>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
