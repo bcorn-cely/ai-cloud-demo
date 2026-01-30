@@ -1,14 +1,9 @@
 import { NextRequest } from 'next/server';
-import { streamText, generateText } from 'ai';
+import { streamText, generateText, tool } from 'ai';
 import { z } from 'zod';
 import { gateway } from '@ai-sdk/gateway';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { nanoid } from 'nanoid';
-import {
-  isDemoMode,
-  streamDemoResponse,
-  generateDemoResponse,
-} from '@/ai/demo-provider';
 import { createTraceContext } from '@/ai/telemetry';
 import type { ProviderMode } from '@/types';
 
@@ -51,12 +46,12 @@ const ChatRequestSchema = z.object({
 
 // Define tools for the chat using AI SDK v6 format
 const chatTools = {
-  getGatewayModelMetadata: {
+  getGatewayModelMetadata: tool({
     description: 'Get metadata for a model from AI Gateway, including pricing and capabilities',
     inputSchema: z.object({
       modelId: z.string().describe('The model ID (e.g., anthropic/claude-sonnet-4)'),
     }),
-    execute: async ({ modelId }: { modelId: string }) => {
+    execute: async ({ modelId }) => {
       try {
         const response = await fetch('https://ai-gateway.vercel.sh/v1/models');
         const data = await response.json();
@@ -66,14 +61,14 @@ const chatTools = {
         return { error: 'Failed to fetch model metadata' };
       }
     },
-  },
+  }),
 
-  getGatewayProviderEndpoints: {
+  getGatewayProviderEndpoints: tool({
     description: 'Get available provider endpoints for a model',
     inputSchema: z.object({
       modelId: z.string().describe('The model ID (e.g., google/gemini-3-pro)'),
     }),
-    execute: async ({ modelId }: { modelId: string }) => {
+    execute: async ({ modelId }) => {
       try {
         const [creator, ...rest] = modelId.split('/');
         const model = rest.join('/');
@@ -86,9 +81,9 @@ const chatTools = {
         return { error: 'Failed to fetch provider endpoints' };
       }
     },
-  },
+  }),
 
-  getCurrentTime: {
+  getCurrentTime: tool({
     description: 'Get the current server time',
     inputSchema: z.object({}),
     execute: async () => {
@@ -97,8 +92,35 @@ const chatTools = {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
     },
-  },
+  }),
 };
+
+/**
+ * Check if the required API key is configured for the provider mode
+ */
+function checkApiKeyConfigured(providerMode: string): { configured: boolean; message?: string } {
+  switch (providerMode) {
+    case 'gateway':
+      if (!process.env.AI_GATEWAY_API_KEY) {
+        return {
+          configured: false,
+          message: 'AI Gateway API key is not configured. Please add AI_GATEWAY_API_KEY to your environment variables. You can get an API key from https://vercel.com/ai-gateway/api-keys',
+        };
+      }
+      return { configured: true };
+
+    case 'custom':
+      // Custom provider doesn't necessarily need env vars - config comes from request
+      return { configured: true };
+
+    case 'sandbox':
+      // Sandbox provider doesn't need API key
+      return { configured: true };
+
+    default:
+      return { configured: false, message: `Unknown provider mode: ${providerMode}` };
+  }
+}
 
 export async function POST(request: NextRequest) {
   const traceId = nanoid(12);
@@ -117,28 +139,28 @@ export async function POST(request: NextRequest) {
 
     const { messages, config, gatewayConfig, customConfig, sandboxConfig } = parsed.data;
 
-    // Handle demo mode
-    if (isDemoMode() && config.providerMode === 'gateway') {
-      if (config.stream) {
-        return streamDemoChat(messages, config, traceId);
-      } else {
-        const response = await generateDemoResponse(
-          messages.map(m => ({ role: m.role, content: m.content })),
-          { model: config.model }
-        );
-        return Response.json({
+    // Filter out messages with empty content (can happen during streaming)
+    const validMessages = messages.filter(m => m.content.trim() !== '');
+
+    if (validMessages.length === 0) {
+      return Response.json(
+        { error: 'No valid messages provided', traceId },
+        { status: 400 }
+      );
+    }
+
+    // Check if API key is configured
+    const apiKeyCheck = checkApiKeyConfigured(config.providerMode);
+    if (!apiKeyCheck.configured) {
+      return Response.json(
+        {
+          error: 'API key not configured',
+          message: apiKeyCheck.message,
           traceId,
-          text: response.text,
-          usage: response.usage,
-          finishReason: response.finishReason,
-          latencyMs: response.latencyMs,
-          config: {
-            providerMode: config.providerMode,
-            model: config.model,
-            demoMode: true,
-          },
-        });
-      }
+          providerMode: config.providerMode,
+        },
+        { status: 401 }
+      );
     }
 
     // Get the model based on provider mode
@@ -155,12 +177,11 @@ export async function POST(request: NextRequest) {
       // Streaming response
       const result = streamText({
         model,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: validMessages.map(m => ({ role: m.role, content: m.content })),
         temperature: config.temperature,
         maxOutputTokens: config.maxTokens,
         topP: config.topP,
         tools,
-        // Note: providerOptions for BYOK would be passed here in production
       });
 
       // Create streaming response with metadata headers
@@ -180,12 +201,11 @@ export async function POST(request: NextRequest) {
       // Non-streaming response
       const result = await generateText({
         model,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: validMessages.map(m => ({ role: m.role, content: m.content })),
         temperature: config.temperature,
         maxOutputTokens: config.maxTokens,
         topP: config.topP,
         tools,
-        // Note: providerOptions for BYOK would be passed here in production
       });
 
       // Create trace
@@ -193,7 +213,7 @@ export async function POST(request: NextRequest) {
         providerMode: config.providerMode as ProviderMode,
         model: config.model,
         requestPayload: {
-          messages,
+          messages: validMessages,
           temperature: config.temperature,
           maxOutputTokens: config.maxTokens,
         },
@@ -201,7 +221,6 @@ export async function POST(request: NextRequest) {
           text: result.text,
           toolCalls: result.toolCalls,
           finishReason: result.finishReason,
-          // AI SDK v6 uses inputTokens/outputTokens instead of promptTokens/completionTokens
           usage: result.usage ? {
             promptTokens: (result.usage as { inputTokens?: number }).inputTokens ?? 0,
             completionTokens: (result.usage as { outputTokens?: number }).outputTokens ?? 0,
@@ -232,10 +251,23 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Chat API error:', error);
 
+    // Provide more helpful error messages
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    let userMessage = errorMessage;
+
+    // Check for common API key issues
+    if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+      userMessage = 'Authentication failed. Please check your API key is valid and has the necessary permissions.';
+    } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+      userMessage = 'Access denied. Your API key may not have access to this model or feature.';
+    } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+      userMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+    }
+
     return Response.json(
       {
         error: 'Chat request failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: userMessage,
         traceId,
       },
       { status: 500 }
@@ -283,46 +315,4 @@ function getModel(
     default:
       throw new Error(`Unknown provider mode: ${providerMode}`);
   }
-}
-
-async function streamDemoChat(
-  messages: Array<{ role: string; content: string }>,
-  config: { model: string },
-  traceId: string
-) {
-  const encoder = new TextEncoder();
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const generator = streamDemoResponse(
-        messages.map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content })),
-        { model: config.model }
-      );
-
-      for await (const chunk of generator) {
-        if (chunk.type === 'text') {
-          const data = JSON.stringify({ type: 'text-delta', textDelta: chunk.content });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        } else if (chunk.type === 'usage') {
-          const data = JSON.stringify({ type: 'usage', usage: chunk.usage });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        } else if (chunk.type === 'done') {
-          const data = JSON.stringify({ type: 'finish', finishReason: 'stop' });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        }
-      }
-
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'X-Trace-Id': traceId,
-      'X-Demo-Mode': 'true',
-    },
-  });
 }

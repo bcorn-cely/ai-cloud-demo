@@ -4,14 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Send,
   RefreshCw,
-  Copy,
-  Check,
   Trash2,
   Zap,
   Server,
   Box,
   Clock,
   FileJson,
+  Code2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { JsonView, allExpanded, defaultStyles } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
 import type { GatewayModel, ProviderMode } from '@/types';
@@ -94,7 +101,6 @@ export default function PlaygroundPage() {
   const [requestInfo, setRequestInfo] = useState<RequestInfo | null>(null);
   const [requestPayload, setRequestPayload] = useState<object | null>(null);
   const [responseData, setResponseData] = useState<object | null>(null);
-  const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch gateway models
@@ -158,8 +164,22 @@ export default function PlaygroundPage() {
         },
       });
 
+      // Handle error responses (including API key not configured)
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `**Error (${response.status})**: ${errorData.message || errorData.error || 'Request failed'}\n\n${errorData.providerMode === 'gateway' && response.status === 401 ? '**Tip:** Add `AI_GATEWAY_API_KEY` to your `.env.local` file. Get your key at https://vercel.com/ai-gateway/api-keys' : ''}`,
+        };
+        setMessages([...newMessages, errorMessage]);
+        setResponseData(errorData);
+        setIsLoading(false);
+        return;
+      }
+
       if (config.stream) {
-        // Handle streaming response
+        // Handle streaming response (plain text stream from toTextStreamResponse)
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let assistantContent = '';
@@ -176,26 +196,16 @@ export default function PlaygroundPage() {
           const { done, value } = await reader.read();
           if (done) break;
 
+          // toTextStreamResponse returns plain text chunks, just concatenate
           const chunk = decoder.decode(value);
-          const lines = chunk.split('\n').filter((line) => line.startsWith('data: '));
-
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'text-delta' || data.textDelta) {
-                assistantContent += data.textDelta || data.content || '';
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMessage.id
-                      ? { ...m, content: assistantContent }
-                      : m
-                  )
-                );
-              }
-            } catch {
-              // Ignore parsing errors for partial chunks
-            }
-          }
+          assistantContent += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessage.id
+                ? { ...m, content: assistantContent }
+                : m
+            )
+          );
         }
 
         setResponseData({
@@ -241,12 +251,6 @@ export default function PlaygroundPage() {
     setResponseData(null);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const availableModels =
     config.providerMode === 'gateway'
       ? gatewayModels.filter((m) => m.type === 'language').map((m) => m.id)
@@ -257,32 +261,32 @@ export default function PlaygroundPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Chat Header */}
-        <div className="p-4 border-b flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="p-3 border-b flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Select
               value={config.providerMode}
               onValueChange={(v) => setConfig((c) => ({ ...c, providerMode: v as ProviderMode }))}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gateway">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4" />
-                    AI Gateway
+                    <Zap className="h-3 w-3" />
+                    Gateway
                   </div>
                 </SelectItem>
                 <SelectItem value="custom">
                   <div className="flex items-center gap-2">
-                    <Server className="h-4 w-4" />
+                    <Server className="h-3 w-3" />
                     Self-Hosted
                   </div>
                 </SelectItem>
                 <SelectItem value="sandbox">
                   <div className="flex items-center gap-2">
-                    <Box className="h-4 w-4" />
-                    Sandbox Mock
+                    <Box className="h-3 w-3" />
+                    Sandbox
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -292,7 +296,7 @@ export default function PlaygroundPage() {
               value={config.model}
               onValueChange={(v) => setConfig((c) => ({ ...c, model: v }))}
             >
-              <SelectTrigger className="w-[280px]">
+              <SelectTrigger className="w-[220px] h-8 text-sm">
                 <SelectValue placeholder="Select model" />
               </SelectTrigger>
               <SelectContent>
@@ -306,12 +310,113 @@ export default function PlaygroundPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {config.providerMode}
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={clearChat}>
-              <Trash2 className="h-4 w-4 mr-1" />
-              Clear
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Code2 className="h-3 w-3 mr-1" />
+                  Dev Tools
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-[500px] sm:max-w-[500px]">
+                <SheetHeader>
+                  <SheetTitle>Developer Tools</SheetTitle>
+                  <SheetDescription>
+                    Inspect request/response data and traces
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-4">
+                  <Tabs defaultValue="request">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="request" className="flex-1">Request</TabsTrigger>
+                      <TabsTrigger value="response" className="flex-1">Response</TabsTrigger>
+                      <TabsTrigger value="trace" className="flex-1">Trace</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="request" className="mt-4">
+                      {requestPayload ? (
+                        <ScrollArea className="h-[calc(100vh-220px)]">
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <JsonView
+                              data={requestPayload}
+                              shouldExpandNode={allExpanded}
+                              style={defaultStyles}
+                            />
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <p className="text-sm text-muted-foreground py-8 text-center">
+                          Send a message to see the request
+                        </p>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="response" className="mt-4">
+                      {responseData ? (
+                        <ScrollArea className="h-[calc(100vh-220px)]">
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <JsonView
+                              data={responseData}
+                              shouldExpandNode={allExpanded}
+                              style={defaultStyles}
+                            />
+                          </div>
+                        </ScrollArea>
+                      ) : (
+                        <p className="text-sm text-muted-foreground py-8 text-center">
+                          Response data will appear here
+                        </p>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="trace" className="mt-4">
+                      {requestInfo ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-lg border p-3">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Latency</p>
+                                  <p className="font-medium">
+                                    {requestInfo.latencyMs ? `${requestInfo.latencyMs}ms` : '...'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="rounded-lg border p-3">
+                              <div className="flex items-center gap-2">
+                                <FileJson className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Trace ID</p>
+                                  <code className="text-xs">{requestInfo.traceId.slice(0, 12)}...</code>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rounded-lg border p-3 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Provider</span>
+                              <Badge variant="outline">{requestInfo.config.providerMode}</Badge>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Model</span>
+                              <code className="text-xs">{requestInfo.config.model}</code>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground py-8 text-center">
+                          Trace info will appear after a request
+                        </p>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <Button variant="ghost" size="sm" className="h-8" onClick={clearChat}>
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         </div>
@@ -321,9 +426,9 @@ export default function PlaygroundPage() {
           <div className="max-w-3xl mx-auto space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg font-medium mb-2">Start a conversation</p>
+                <p className="text-lg font-medium mb-1">Start a conversation</p>
                 <p className="text-sm">
-                  Chat with {config.model} via {config.providerMode}
+                  {config.model} via {config.providerMode}
                 </p>
               </div>
             ) : (
@@ -384,24 +489,19 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
-      {/* Right Panel */}
-      <div className="w-[400px] border-l flex flex-col">
-        <Tabs defaultValue="config" className="flex-1 flex flex-col">
-          <TabsList className="w-full justify-start rounded-none border-b px-4 pt-4">
-            <TabsTrigger value="config">Config</TabsTrigger>
-            <TabsTrigger value="request">Request</TabsTrigger>
-            <TabsTrigger value="response">Response</TabsTrigger>
-            <TabsTrigger value="trace">Trace</TabsTrigger>
-          </TabsList>
+      {/* Right Panel - Config Only */}
+      <div className="w-[280px] border-l">
+        <ScrollArea className="h-full">
+          <div className="p-4 space-y-5">
+            <div>
+              <h3 className="font-medium text-sm mb-3">Settings</h3>
 
-          <ScrollArea className="flex-1">
-            <TabsContent value="config" className="mt-0 p-4 space-y-6">
-              {/* Model Settings */}
               <div className="space-y-4">
-                <h3 className="font-medium text-sm">Model Settings</h3>
-
                 <div className="space-y-2">
-                  <Label>Temperature: {config.temperature}</Label>
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs">Temperature</Label>
+                    <span className="text-xs text-muted-foreground">{config.temperature}</span>
+                  </div>
                   <input
                     type="range"
                     min="0"
@@ -411,12 +511,15 @@ export default function PlaygroundPage() {
                     onChange={(e) =>
                       setConfig((c) => ({ ...c, temperature: parseFloat(e.target.value) }))
                     }
-                    className="w-full"
+                    className="w-full h-1"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Max Tokens: {config.maxTokens}</Label>
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs">Max Tokens</Label>
+                    <span className="text-xs text-muted-foreground">{config.maxTokens}</span>
+                  </div>
                   <input
                     type="range"
                     min="256"
@@ -426,163 +529,87 @@ export default function PlaygroundPage() {
                     onChange={(e) =>
                       setConfig((c) => ({ ...c, maxTokens: parseInt(e.target.value) }))
                     }
-                    className="w-full"
+                    className="w-full h-1"
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="tools">Enable Tools</Label>
+                  <Label className="text-xs">Tools</Label>
                   <Switch
-                    id="tools"
                     checked={config.tools}
                     onCheckedChange={(v) => setConfig((c) => ({ ...c, tools: v }))}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="stream">Streaming</Label>
+                  <Label className="text-xs">Streaming</Label>
                   <Switch
-                    id="stream"
                     checked={config.stream}
                     onCheckedChange={(v) => setConfig((c) => ({ ...c, stream: v }))}
                   />
                 </div>
               </div>
+            </div>
 
-              <Separator />
-
-              {/* Provider-specific config */}
-              {config.providerMode === 'custom' && (
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm">Custom Provider</h3>
-                  <div className="space-y-2">
-                    <Label>Base URL</Label>
-                    <Input
-                      placeholder="http://localhost:8000/v1"
-                      value={customConfig.baseURL}
-                      onChange={(e) =>
-                        setCustomConfig((c) => ({ ...c, baseURL: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>API Key (optional)</Label>
-                    <Input
-                      type="password"
-                      placeholder="sk-..."
-                      value={customConfig.apiKey}
-                      onChange={(e) =>
-                        setCustomConfig((c) => ({ ...c, apiKey: e.target.value }))
-                      }
-                    />
+            {/* Provider-specific config */}
+            {config.providerMode === 'custom' && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="font-medium text-sm mb-3">Custom Provider</h3>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Base URL</Label>
+                      <Input
+                        placeholder="http://localhost:8000/v1"
+                        value={customConfig.baseURL}
+                        onChange={(e) =>
+                          setCustomConfig((c) => ({ ...c, baseURL: e.target.value }))
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">API Key</Label>
+                      <Input
+                        type="password"
+                        placeholder="sk-..."
+                        value={customConfig.apiKey}
+                        onChange={(e) =>
+                          setCustomConfig((c) => ({ ...c, apiKey: e.target.value }))
+                        }
+                        className="h-8 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
+              </>
+            )}
 
-              {config.providerMode === 'sandbox' && (
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm">Sandbox Provider</h3>
-                  <div className="space-y-2">
-                    <Label>Sandbox Domain</Label>
+            {config.providerMode === 'sandbox' && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="font-medium text-sm mb-3">Sandbox</h3>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Domain</Label>
                     <Input
-                      placeholder="https://sandbox-xxx.vercel.app"
+                      placeholder="sandbox-xxx.vercel.app"
                       value={sandboxConfig.domain}
                       onChange={(e) =>
                         setSandboxConfig((c) => ({ ...c, domain: e.target.value }))
                       }
+                      className="h-8 text-sm"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Start a sandbox from the Sandbox page to get a domain
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    Start a sandbox from the Sandbox page
                   </p>
                 </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="request" className="mt-0 p-4">
-              <h3 className="font-medium text-sm mb-3">Request Payload</h3>
-              {requestPayload ? (
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <JsonView
-                    data={requestPayload}
-                    shouldExpandNode={allExpanded}
-                    style={defaultStyles}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Send a message to see the request payload
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="response" className="mt-0 p-4">
-              <h3 className="font-medium text-sm mb-3">Response Data</h3>
-              {responseData ? (
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <JsonView
-                    data={responseData}
-                    shouldExpandNode={allExpanded}
-                    style={defaultStyles}
-                  />
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Response data will appear here
-                </p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="trace" className="mt-0 p-4">
-              <h3 className="font-medium text-sm mb-3">Request Trace</h3>
-              {requestInfo ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card>
-                      <CardContent className="pt-4">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Latency</p>
-                            <p className="font-medium">
-                              {requestInfo.latencyMs ? `${requestInfo.latencyMs}ms` : '...'}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-4">
-                        <div className="flex items-center gap-2">
-                          <FileJson className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Trace ID</p>
-                            <code className="text-xs">{requestInfo.traceId.slice(0, 8)}...</code>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="rounded-lg border p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Provider</span>
-                      <Badge variant="outline">{requestInfo.config.providerMode}</Badge>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Model</span>
-                      <code className="text-xs">{requestInfo.config.model}</code>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Trace information will appear here after a request
-                </p>
-              )}
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
+              </>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );

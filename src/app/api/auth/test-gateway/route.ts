@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
-import { isDemoMode } from '@/ai/demo-provider';
 
 export async function GET() {
-  // Demo mode simulation
-  if (isDemoMode()) {
+  // Check if API key is configured
+  if (!process.env.AI_GATEWAY_API_KEY) {
     return NextResponse.json({
-      success: true,
-      message: 'Demo mode: Gateway auth would be tested here with a real API key',
+      success: false,
+      message: 'AI Gateway API key not configured',
       details: {
-        demoMode: true,
+        configured: false,
+        hint: 'Add AI_GATEWAY_API_KEY to your .env.local file. Get your key at https://vercel.com/ai-gateway/api-keys',
         timestamp: new Date().toISOString(),
       },
-    });
+    }, { status: 401 });
   }
 
   try {
-    // In real mode, we'd make a lightweight test request to AI Gateway
+    // Make a lightweight test request to AI Gateway
     const response = await fetch('https://ai-gateway.vercel.sh/v1/models', {
       headers: {
         'Authorization': `Bearer ${process.env.AI_GATEWAY_API_KEY}`,
@@ -29,6 +29,7 @@ export async function GET() {
         details: {
           status: response.status,
           statusText: response.statusText,
+          timestamp: new Date().toISOString(),
         },
       });
     }

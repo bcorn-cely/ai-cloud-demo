@@ -8,325 +8,197 @@ import {
   Box,
   Activity,
   ArrowRight,
-  CheckCircle2,
-  AlertCircle,
   Zap,
-  Shield,
-  Globe,
+  Sparkles,
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const features = [
   {
-    title: 'AI Gateway + Model Discovery',
-    description: 'Browse 100+ models, view pricing, endpoints, and capabilities',
+    title: 'AI Gateway',
+    description: 'Browse 100+ models with pricing, endpoints, and capabilities',
     href: '/gateway',
     icon: Database,
-    status: 'ready',
+    gradient: 'from-blue-500 to-cyan-500',
   },
   {
-    title: 'Streaming Chat Playground',
-    description: 'Chat with models via Gateway, self-hosted, or sandbox providers',
+    title: 'Chat Playground',
+    description: 'Chat with models via Gateway, self-hosted, or sandbox',
     href: '/playground',
     icon: MessageSquare,
-    status: 'ready',
+    gradient: 'from-emerald-500 to-teal-500',
   },
   {
-    title: 'BYOK & Auth Patterns',
-    description: 'Request-scoped BYOK, OIDC, bearer tokens, OAuth patterns',
+    title: 'Auth Patterns',
+    description: 'BYOK, OIDC, bearer tokens, OAuth patterns',
     href: '/auth',
     icon: Key,
-    status: 'ready',
+    gradient: 'from-amber-500 to-orange-500',
   },
   {
-    title: 'Proxy & VPC Configuration',
-    description: 'Corporate proxy, custom baseURL, chained headers',
+    title: 'Proxy Config',
+    description: 'Corporate proxy, custom baseURL, headers',
     href: '/proxy',
     icon: Network,
-    status: 'ready',
+    gradient: 'from-rose-500 to-pink-500',
   },
   {
-    title: 'Durable Workflows',
-    description: 'Long-running agents with streaming progress',
+    title: 'Workflows',
+    description: 'Durable agents with streaming progress',
     href: '/workflows',
     icon: Workflow,
-    status: 'beta',
+    badge: 'Beta',
+    gradient: 'from-violet-500 to-purple-500',
   },
   {
-    title: 'Sandbox Mock Models',
-    description: 'Spin up OpenAI-compatible mock servers',
+    title: 'Sandbox',
+    description: 'OpenAI-compatible mock servers',
     href: '/sandbox',
     icon: Box,
-    status: 'beta',
+    badge: 'Beta',
+    gradient: 'from-indigo-500 to-blue-500',
   },
   {
-    title: 'Request Telemetry',
-    description: 'Traces, latency, cost estimation, export',
+    title: 'Traces',
+    description: 'Latency, cost estimation, export',
     href: '/traces',
     icon: Activity,
-    status: 'ready',
-  },
-];
-
-const scenarios = [
-  {
-    title: 'Strict On-Prem Model',
-    description: 'Use a self-hosted model via OpenAI-compatible API in your VPC',
-    icon: Shield,
-    tags: ['self-hosted', 'VPC', 'compliance'],
-  },
-  {
-    title: 'Gateway Hosted Model',
-    description: 'Use AI Gateway with automatic provider selection',
-    icon: Globe,
-    tags: ['gateway', 'multi-provider', 'fallback'],
-  },
-  {
-    title: 'BYOK OpenAI',
-    description: 'Use your own OpenAI API key via AI Gateway',
-    icon: Key,
-    tags: ['byok', 'cost-control', 'credits'],
-  },
-  {
-    title: 'Corporate Proxy',
-    description: 'Route through enterprise proxy with custom headers',
-    icon: Network,
-    tags: ['proxy', 'enterprise', 'security'],
+    gradient: 'from-fuchsia-500 to-pink-500',
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="container mx-auto px-6 py-8 max-w-7xl">
-      {/* Hero */}
-      <div className="mb-12">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Zap className="h-6 w-6 text-primary-foreground" />
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+      <div className="container mx-auto px-6 py-10 max-w-5xl">
+        {/* Hero */}
+        <div className="mb-12">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-xl shadow-primary/25">
+              <Zap className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Vercel AI Platform Demo
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                AI SDK + Gateway + Enterprise Patterns
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Vercel AI Platform Demo
-            </h1>
-            <p className="text-muted-foreground">
-              AI SDK v6 + AI Gateway + Enterprise Patterns
-            </p>
-          </div>
-        </div>
 
-        <Alert className="mt-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Demo Mode Active</AlertTitle>
-          <AlertDescription>
-            No API keys configured. Using mock responses. Add <code className="text-xs bg-muted px-1 py-0.5 rounded">AI_GATEWAY_API_KEY</code> to <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.local</code> for real model access.
-          </AlertDescription>
-        </Alert>
-      </div>
-
-      {/* Quick Start */}
-      <div className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Quick Start</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
-                Configure Auth
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                Copy <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.example</code> to <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.local</code> and add your API key.
-              </p>
-              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                AI_GATEWAY_API_KEY=your_key
-              </pre>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
-                Explore Models
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                Browse the AI Gateway model catalog to see available models, pricing, and capabilities.
-              </p>
-              <Button asChild size="sm">
-                <Link href="/gateway">
-                  Model Explorer <ArrowRight className="ml-2 h-3 w-3" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
-                Start Chatting
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                Open the playground to chat with models and inspect request/response details.
-              </p>
-              <Button asChild size="sm">
-                <Link href="/playground">
-                  Playground <ArrowRight className="ml-2 h-3 w-3" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Features Grid */}
-      <div className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Features</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <Link key={feature.href} href={feature.href}>
-              <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                      <feature.icon className="h-5 w-5" />
-                    </div>
-                    {feature.status === 'beta' && (
-                      <Badge variant="outline" className="text-xs">Beta</Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-base mt-2">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Enterprise Scenarios */}
-      <div className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Enterprise Scenarios</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {scenarios.map((scenario) => (
-            <Card key={scenario.title}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                    <scenario.icon className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-base">{scenario.title}</CardTitle>
+          <Card className="border-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 shadow-lg shadow-primary/5">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="mb-3">{scenario.description}</CardDescription>
-                <div className="flex flex-wrap gap-1">
-                  {scenario.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
+                <div>
+                  <h3 className="font-semibold mb-1">Getting Started</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Add <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">AI_GATEWAY_API_KEY</code> to{' '}
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">.env.local</code> to enable chat functionality.
+                  </p>
+                  <a
+                    href="https://vercel.com/ai-gateway/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Get your API key <ArrowRight className="h-3 w-3" />
+                  </a>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Start */}
+        <div className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Quick Start</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-bold shadow-lg shadow-primary/25">
+                    1
+                  </div>
+                  <span className="font-semibold">Configure</span>
+                </div>
+                <pre className="text-xs bg-muted/50 p-3 rounded-lg font-mono overflow-x-auto">
+                  AI_GATEWAY_API_KEY=key
+                </pre>
               </CardContent>
             </Card>
-          ))}
+
+            <Card className="border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-bold shadow-lg shadow-primary/25">
+                    2
+                  </div>
+                  <span className="font-semibold">Browse Models</span>
+                </div>
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/gateway">
+                    Model Explorer <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-bold shadow-lg shadow-primary/25">
+                    3
+                  </div>
+                  <span className="font-semibold">Start Chatting</span>
+                </div>
+                <Button asChild className="w-full shadow-lg shadow-primary/25">
+                  <Link href="/playground">
+                    Open Playground <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      {/* What's Included */}
-      <div className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">What&apos;s Included</h2>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">AI SDK v6</p>
-                    <p className="text-xs text-muted-foreground">Latest AI SDK with streaming, tools, structured output</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Vercel AI Gateway</p>
-                    <p className="text-xs text-muted-foreground">Unified API for 100+ models with fallback routing</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">OpenAI-Compatible Provider</p>
-                    <p className="text-xs text-muted-foreground">Self-hosted models via vLLM, TGI, Ollama, etc.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Request-scoped BYOK</p>
-                    <p className="text-xs text-muted-foreground">Bring your own keys for OpenAI, Anthropic, Bedrock, Vertex</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Workflow DevKit</p>
-                    <p className="text-xs text-muted-foreground">Durable agents with automatic retries and streaming</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Vercel Sandbox</p>
-                    <p className="text-xs text-muted-foreground">Ephemeral VMs for running mock model servers</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Full Request Inspection</p>
-                    <p className="text-xs text-muted-foreground">View payloads, responses, traces, latency, cost</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Demo Mode</p>
-                    <p className="text-xs text-muted-foreground">Works without real API keys using mock responses</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tech Stack */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Tech Stack</h2>
-        <div className="flex flex-wrap gap-2">
-          <Badge>Next.js 16</Badge>
-          <Badge>AI SDK v6</Badge>
-          <Badge>@ai-sdk/gateway</Badge>
-          <Badge>@ai-sdk/openai-compatible</Badge>
-          <Badge>Workflow DevKit</Badge>
-          <Badge>@vercel/sandbox</Badge>
-          <Badge>TypeScript</Badge>
-          <Badge>Tailwind CSS</Badge>
-          <Badge>shadcn/ui</Badge>
+        {/* Features Grid */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Features</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {features.map((feature) => (
+              <Link key={feature.href} href={feature.href}>
+                <Card className="group h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${feature.gradient} shadow-lg shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                        <feature.icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-base">{feature.title}</CardTitle>
+                          {feature.badge && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium">
+                              {feature.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="text-sm">
+                          {feature.description}
+                        </CardDescription>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-muted-foreground group-hover:translate-x-1 transition-all shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>

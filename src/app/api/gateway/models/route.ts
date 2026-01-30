@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getDemoModels, isDemoMode } from '@/ai/demo-provider';
 import type { GatewayModelsResponse } from '@/types';
 
 // Cache models for 5 minutes
@@ -15,13 +14,7 @@ export async function GET() {
       return NextResponse.json(cachedModels);
     }
 
-    // Use demo models if in demo mode
-    if (isDemoMode()) {
-      const demoModels = getDemoModels();
-      return NextResponse.json(demoModels);
-    }
-
-    // Fetch from AI Gateway
+    // Always fetch from AI Gateway - model list is public
     const response = await fetch('https://ai-gateway.vercel.sh/v1/models', {
       headers: {
         'Content-Type': 'application/json',
@@ -41,14 +34,14 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching models:', error);
+    console.error('Error fetching models from AI Gateway:', error);
 
-    // Fall back to demo models on error
-    const demoModels = getDemoModels();
-    return NextResponse.json(demoModels, {
-      headers: {
-        'X-Fallback': 'demo',
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch models from AI Gateway',
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
-    });
+      { status: 502 }
+    );
   }
 }

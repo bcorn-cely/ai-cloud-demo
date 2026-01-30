@@ -84,12 +84,3 @@ export {
   type CostBreakdown,
 } from './pricing';
 
-// Demo provider
-export {
-  generateDemoResponse,
-  streamDemoResponse,
-  isDemoMode,
-  getDemoModels,
-  type DemoMessage,
-  type DemoResponse,
-} from './demo-provider';

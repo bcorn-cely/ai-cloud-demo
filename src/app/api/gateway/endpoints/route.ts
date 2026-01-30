@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isDemoMode } from '@/ai/demo-provider';
 import type { ModelEndpointsResponse } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -26,12 +25,7 @@ export async function GET(request: NextRequest) {
   const model = parts.slice(1).join('/');
 
   try {
-    // Return demo endpoints if in demo mode
-    if (isDemoMode()) {
-      return NextResponse.json(getDemoEndpoints(modelId, creator, model));
-    }
-
-    // Fetch from AI Gateway
+    // Always fetch from AI Gateway - endpoints info is public
     const url = `https://ai-gateway.vercel.sh/v1/models/${creator}/${model}/endpoints`;
     const response = await fetch(url, {
       headers: {
@@ -53,73 +47,14 @@ export async function GET(request: NextRequest) {
     const data: ModelEndpointsResponse = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching endpoints:', error);
+    console.error('Error fetching endpoints from AI Gateway:', error);
 
-    // Fall back to demo endpoints
-    return NextResponse.json(getDemoEndpoints(modelId, creator, model), {
-      headers: {
-        'X-Fallback': 'demo',
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch endpoints from AI Gateway',
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
-    });
+      { status: 502 }
+    );
   }
-}
-
-function getDemoEndpoints(modelId: string, creator: string, model: string): ModelEndpointsResponse {
-  return {
-    data: {
-      id: modelId,
-      name: `Demo ${model}`,
-      created: Date.now(),
-      description: 'Demo model endpoint for demonstration purposes',
-      architecture: {
-        modality: 'text→text',
-        input_modalities: ['text'],
-        output_modalities: ['text'],
-      },
-      endpoints: [
-        {
-          name: `${creator} | ${modelId}`,
-          model_name: model,
-          context_length: 128000,
-          max_completion_tokens: 8192,
-          provider_name: creator,
-          tag: creator,
-          supported_parameters: [
-            'max_tokens',
-            'temperature',
-            'top_p',
-            'stop',
-            'tools',
-            'tool_choice',
-            'stream',
-          ],
-          status: 0,
-          pricing: {
-            prompt: '0.000003',
-            completion: '0.000015',
-          },
-          supports_implicit_caching: false,
-        },
-        {
-          name: `demo-backup | ${modelId}`,
-          model_name: model,
-          context_length: 128000,
-          max_completion_tokens: 4096,
-          provider_name: 'demo-backup',
-          tag: 'demo-backup',
-          supported_parameters: [
-            'max_tokens',
-            'temperature',
-            'stop',
-          ],
-          status: 0,
-          pricing: {
-            prompt: '0.000002',
-            completion: '0.000010',
-          },
-          supports_implicit_caching: false,
-        },
-      ],
-    },
-  };
 }
